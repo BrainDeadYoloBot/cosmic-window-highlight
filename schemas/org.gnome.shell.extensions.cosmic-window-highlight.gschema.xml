@@ -8,5 +8,16 @@
       <summary>Border thickness</summary>
       <description>Thickness of the active window highlight border in pixels.</description>
     </key>
+    <key name="highlight-maximized" type="b">
+      <default>false</default>
+      <summary>Highlight maximized windows</summary>
+      <description>Show the active border around fully maximized windows.</description>
+    </key>
+    <key name="animation-duration" type="i">
+      <default>300</default>
+      <range min="0" max="5000"/>
+      <summary>Animation duration (ms)</summary>
+      <description>Duration of the border fade-in animation in milliseconds. Set to 0 to disable.</description>
+    </key>
   </schema>
 </schemalist>
