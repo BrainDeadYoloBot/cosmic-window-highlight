@@ -46,3 +46,7 @@ gnome-extensions prefs cosmic-window-highlight@braindeadyolobot
 | `border-thickness` | `int` | `3` | Width of the focus border in pixels. |
 | `highlight-maximized` | `boolean` | `false` | Show the focus border on maximized windows on the desktop. |
 | `animation-duration` | `int` | `300` | Fade-in duration in milliseconds (`0` to disable). |
+
+## License
+
+Distributed under the [GPL-3.0 License](LICENSE)

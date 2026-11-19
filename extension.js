@@ -99,6 +99,12 @@ export default class CosmicWindowHighlightExtension extends Extension {
             this._overviewHiddenId = 0;
         }
 
+        if (this._mapSignalId && this._mapActor) {
+            this._mapActor.disconnect(this._mapSignalId);
+            this._mapSignalId = null;
+            this._mapActor = null;
+        }
+
         this._detachWindow();
         this._clearOverviewHighlight();
 
@@ -186,6 +192,12 @@ export default class CosmicWindowHighlightExtension extends Extension {
             const parent = this._border.get_parent();
             if (parent)
                 parent.remove_child(this._border);
+        }
+
+        if (this._mapSignalId && this._mapActor) {
+            this._mapActor.disconnect(this._mapSignalId);
+            this._mapSignalId = null;
+            this._mapActor = null;
         }
     }
 
