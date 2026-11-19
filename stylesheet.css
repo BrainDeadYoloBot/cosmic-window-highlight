@@ -1,0 +1,22 @@
+/* Active window ring on desktop */
+.cosmic-active-window-border {
+    border-style: solid;
+    border-width: 3px;
+    border-color: -st-accent-color;
+    border-radius: 12px;
+    background-color: transparent;
+}
+
+/* Square corners when maximized */
+.cosmic-active-window-border-tiled {
+    border-radius: 0px;
+}
+
+/* Active window highlight inside GNOME Overview */
+.cosmic-overview-active-preview {
+    outline-style: solid;
+    outline-width: 3px;
+    outline-color: -st-accent-color;
+    outline-offset: 2px;
+    border-radius: 12px;
+}

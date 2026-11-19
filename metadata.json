@@ -1,0 +1,11 @@
+{
+  "uuid": "cosmic-window-highlight@braindeadyolobot",
+  "name": "COSMIC Window Highlight",
+  "description": "Highlights the active window and Overview preview using the system accent color.",
+  "settings-schema": "org.gnome.shell.extensions.cosmic-window-highlight",
+  "shell-version": [
+    "51"
+  ],
+  "url": "https://github.com/braindeadyolobot/cosmic-window-highlight",
+  "version": 1
+}
