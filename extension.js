@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import GObject from 'gi://GObject';
 import Clutter from 'gi://Clutter';
 import Meta from 'gi://Meta';
 import St from 'gi://St';
@@ -28,6 +27,8 @@ export default class CosmicWindowHighlightExtension extends Extension {
         this._trackedWindow = null;
         this._windowSignals = [];
         this._overviewPreview = null;
+        this._mapActor = null;
+        this._mapSignalId = null;
 
         this._signals = [
             [this._settings, this._settings.connect('changed::border-thickness', () => {
@@ -62,6 +63,12 @@ export default class CosmicWindowHighlightExtension extends Extension {
         for (const [obj, id] of this._signals)
             obj.disconnect(id);
         this._signals = [];
+
+        if (this._mapSignalId && this._mapActor) {
+            this._mapActor.disconnect(this._mapSignalId);
+            this._mapSignalId = null;
+            this._mapActor = null;
+        }
 
         this._detachWindow();
         this._clearOverviewHighlight();
@@ -122,6 +129,12 @@ export default class CosmicWindowHighlightExtension extends Extension {
     }
 
     _detachWindow() {
+        if (this._mapSignalId && this._mapActor) {
+            this._mapActor.disconnect(this._mapSignalId);
+            this._mapSignalId = null;
+            this._mapActor = null;
+        }
+
         if (this._trackedWindow) {
             for (const id of this._windowSignals)
                 this._trackedWindow.disconnect(id);
@@ -154,15 +167,20 @@ export default class CosmicWindowHighlightExtension extends Extension {
             return;
 
         if (!parent.mapped) {
-            parent.connect_object(
-                'notify::mapped',
-                () => {
-                    if (parent.mapped)
-                        this._fadeInBorder();
-                },
-                this._border,
-                GObject.ConnectFlags.ONE_SHOT
-            );
+            if (this._mapSignalId && this._mapActor) {
+                this._mapActor.disconnect(this._mapSignalId);
+                this._mapSignalId = null;
+                this._mapActor = null;
+            }
+            this._mapActor = parent;
+            this._mapSignalId = parent.connect('notify::mapped', () => {
+                if (this._mapActor?.mapped) {
+                    this._mapActor.disconnect(this._mapSignalId);
+                    this._mapSignalId = null;
+                    this._mapActor = null;
+                    this._fadeInBorder();
+                }
+            });
             return;
         }
 
@@ -260,7 +278,7 @@ export default class CosmicWindowHighlightExtension extends Extension {
         if (!focusWin)
             return;
 
-        const preview = this._findPreviewForWindow(Main.overview, focusWin);
+        const preview = this._findPreviewForWindow(Main.layoutManager.overviewGroup, focusWin);
         if (!preview)
             return;
 
