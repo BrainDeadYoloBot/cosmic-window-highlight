@@ -4,8 +4,10 @@
   "description": "Highlights the active window and Overview preview using the system accent color.",
   "settings-schema": "org.gnome.shell.extensions.cosmic-window-highlight",
   "shell-version": [
+    "48",
+    "49",
+    "50",
     "51"
   ],
-  "url": "https://github.com/braindeadyolobot/cosmic-window-highlight",
-  "version": 1
+  "url": "https://github.com/braindeadyolobot/cosmic-window-highlight"
 }
