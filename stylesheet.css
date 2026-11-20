@@ -5,21 +5,14 @@
     border-color: -st-accent-color;
     border-radius: 15px;
     background-color: transparent;
-    /*box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);*/
-    /*border-color: st-darken(-st-accent-color, 12%);*/
     box-shadow: inset 0 0 0 1px #1e1e1e;
-}
-
-/* Square corners when maximized */
-.cosmic-active-window-border-tiled {
-    border-radius: 0px;
 }
 
 /* Active window highlight inside GNOME Overview */
 .cosmic-overview-active-preview {
-    outline-style: solid;
-    outline-width: 3px;
-    outline-color: -st-accent-color;
-    outline-offset: 2px;
-    border-radius: 12px;
+    border-style: solid;
+    border-width: 3px;
+    border-color: -st-accent-color;
+    border-radius: 15px;
+    box-shadow: inset 0 0 0 1px #1e1e1e;
 }
