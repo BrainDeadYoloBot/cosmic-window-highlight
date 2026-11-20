@@ -4,11 +4,14 @@ import Meta from 'gi://Meta';
 import St from 'gi://St';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import { WindowPreview } from 'resource:///org/gnome/shell/ui/windowPreview.js';
 
 const ACTIVE_CLASS = 'cosmic-active-window-border';
-const MAXIMIZED_CLASS = 'cosmic-active-window-border-tiled';
-const OVERVIEW_ACTIVE_CLASS = 'cosmic-overview-active-preview';
+
+const HIGHLIGHTABLE_TYPES = new Set([
+    Meta.WindowType.NORMAL,
+    Meta.WindowType.DIALOG,
+    Meta.WindowType.MODAL_DIALOG,
+]);
 
 export default class CosmicWindowHighlightExtension extends Extension {
     enable() {
@@ -18,19 +21,11 @@ export default class CosmicWindowHighlightExtension extends Extension {
         this._animationDuration = this._settings.get_int('animation-duration');
         this._borderRadius = this._settings.get_int('border-radius');
 
-        this._border = new St.Widget({
-            style_class: ACTIVE_CLASS,
-            reactive: false,
-            can_focus: false,
-            visible: false,
-        });
-
+        this._border = this._createBorder();
         this._trackedWindow = null;
         this._trackedActor = null;
         this._windowSignals = [];
         this._actorSignals = [];
-        this._overviewPreview = null;
-        this._overviewPreviewDestroyId = null;
 
         this._signals = [
             [this._settings, this._settings.connect('changed::border-thickness', () => {
@@ -54,8 +49,11 @@ export default class CosmicWindowHighlightExtension extends Extension {
             [Main.overview, Main.overview.connect('showing', () => {
                 this._applyBorder();
             })],
-            [Main.overview, Main.overview.connect('hidden', () => {
+            [Main.overview, Main.overview.connect('shown', () => {
                 this._applyBorder();
+            })],
+            [Main.overview, Main.overview.connect('hidden', () => {
+                this._onFocusChanged();
             })],
         ];
 
@@ -68,7 +66,6 @@ export default class CosmicWindowHighlightExtension extends Extension {
         this._signals = [];
 
         this._detachWindow();
-        this._clearOverviewPreview();
 
         if (this._border) {
             this._border.destroy();
@@ -78,20 +75,48 @@ export default class CosmicWindowHighlightExtension extends Extension {
         this._settings = null;
     }
 
+    _createBorder() {
+        const border = new St.Widget({
+            style_class: ACTIVE_CLASS,
+            reactive: false,
+            can_focus: false,
+            visible: false,
+        });
+        border.connect('destroy', () => {
+            if (this._border === border)
+                this._border = null;
+        });
+        return border;
+    }
+
     _onFocusChanged() {
+        const focusWin = global.display.focus_window;
+
+        if (!focusWin && (Main.overview.visible || Main.overview.animationInProgress)) {
+            this._applyBorder();
+            return;
+        }
+
+        const win = focusWin && HIGHLIGHTABLE_TYPES.has(focusWin.get_window_type())
+            ? focusWin
+            : null;
+
+        if (win === this._trackedWindow) {
+            this._applyBorder();
+            return;
+        }
+
         this._detachWindow();
 
-        const win = global.display.focus_window;
-        if (!win || !this._isHighlightable(win)) {
-            this._applyBorder();
+        if (!win)
             return;
-        }
 
         const actor = win.get_compositor_private();
-        if (!actor) {
-            this._applyBorder();
+        if (!actor)
             return;
-        }
+
+        if (!this._border)
+            this._border = this._createBorder();
 
         this._trackedWindow = win;
         this._windowSignals = [
@@ -139,39 +164,15 @@ export default class CosmicWindowHighlightExtension extends Extension {
         }
     }
 
-    _clearOverviewPreview() {
-        if (!this._overviewPreview)
-            return;
-
-        if (this._overviewPreviewDestroyId) {
-            this._overviewPreview.disconnect(this._overviewPreviewDestroyId);
-            this._overviewPreviewDestroyId = null;
-        }
-
-        this._overviewPreview.remove_style_class_name(OVERVIEW_ACTIVE_CLASS);
-        this._overviewPreview.set_style(null);
-        this._overviewPreview = null;
-    }
-
-    _isHighlightable(win) {
-        const type = win.get_window_type();
-        return (
-            type === Meta.WindowType.NORMAL ||
-            type === Meta.WindowType.DIALOG ||
-            type === Meta.WindowType.MODAL_DIALOG
-        );
-    }
-
-    _shouldShowBorder(win) {
-        const hideMaximized =
-            !Main.overview.visible &&
-            win.is_maximized() &&
-            !this._highlightMaximized;
-
+    _shouldShowBorder(win, inOverview) {
+        const hideMaximized = !inOverview && win.is_maximized() && !this._highlightMaximized;
         return !(win.is_fullscreen() || win.minimized || hideMaximized);
     }
 
-    _isEdgeFlush(win) {
+    _isEdgeFlush(win, inOverview) {
+        if (inOverview)
+            return false;
+
         if (win.is_maximized() || win.maximized_vertically || win.maximized_horizontally)
             return true;
 
@@ -187,12 +188,11 @@ export default class CosmicWindowHighlightExtension extends Extension {
         return (onLeft || onRight) && (onTop || onBottom);
     }
 
-    _computeBorderGeometry(win) {
+    _computeBorderGeometry(win, inOverview) {
         const buf = win.get_buffer_rect();
         const frame = win.get_frame_rect();
-        const edgeFlush = this._isEdgeFlush(win);
+        const edgeFlush = this._isEdgeFlush(win, inOverview);
         const px = this._borderThickness;
-        const rad = this._borderRadius;
         const outset = edgeFlush ? 0 : px;
 
         return {
@@ -200,64 +200,28 @@ export default class CosmicWindowHighlightExtension extends Extension {
             y: (frame.y - buf.y) - outset,
             width: frame.width + outset * 2,
             height: frame.height + outset * 2,
-            edgeFlush,
-            radius: edgeFlush ? 0 : rad + px,
+            radius: edgeFlush ? 0 : this._borderRadius + px,
         };
-    }
-
-    _applyStyle(edgeFlush = false, radius = 0) {
-        if (this._overviewPreview)
-            this._overviewPreview.set_style(`outline-width: ${this._borderThickness}px;`);
-
-        if (!this._border)
-            return;
-
-        if (edgeFlush)
-            this._border.add_style_class_name(MAXIMIZED_CLASS);
-        else
-            this._border.remove_style_class_name(MAXIMIZED_CLASS);
-
-        this._border.set_style(`border-width: ${this._borderThickness}px; border-radius: ${radius}px;`);
     }
 
     _applyBorder() {
         if (!this._border)
             return;
 
-        if (Main.overview.visible) {
-            const focusWin = global.display.focus_window;
-            const preview = focusWin
-                ? this._findPreviewForWindow(Main.layoutManager.overviewGroup, focusWin)
-                : null;
-
-            if (this._overviewPreview && this._overviewPreview !== preview)
-                this._clearOverviewPreview();
-
-            if (preview && this._overviewPreview !== preview) {
-                preview.add_style_class_name(OVERVIEW_ACTIVE_CLASS);
-                this._overviewPreview = preview;
-                this._overviewPreviewDestroyId = preview.connect('destroy', () => {
-                    this._overviewPreviewDestroyId = null;
-                    this._overviewPreview = null;
-                });
-            }
-        } else {
-            this._clearOverviewPreview();
-        }
-
+        const inOverview = Main.overview.visible;
         const parent = this._border.get_parent();
-        if (!this._trackedWindow || !parent?.mapped || !this._shouldShowBorder(this._trackedWindow)) {
+        const actorReady = inOverview || parent?.mapped;
+
+        if (!this._trackedWindow || !actorReady || !this._shouldShowBorder(this._trackedWindow, inOverview)) {
             this._border.remove_all_transitions();
             this._border.visible = false;
-            if (this._overviewPreview)
-                this._applyStyle();
             return;
         }
 
-        const { x, y, width, height, edgeFlush, radius } = this._computeBorderGeometry(this._trackedWindow);
+        const { x, y, width, height, radius } = this._computeBorderGeometry(this._trackedWindow, inOverview);
         this._border.set_position(x, y);
         this._border.set_size(width, height);
-        this._applyStyle(edgeFlush, radius);
+        this._border.set_style(`border-width: ${this._borderThickness}px; border-radius: ${radius}px;`);
 
         if (!this._border.visible) {
             this._border.visible = true;
@@ -279,18 +243,5 @@ export default class CosmicWindowHighlightExtension extends Extension {
                     this._border.opacity = 255;
             },
         });
-    }
-
-    _findPreviewForWindow(root, targetWindow) {
-        const stack = [root];
-        while (stack.length > 0) {
-            const actor = stack.pop();
-            if (actor instanceof WindowPreview && actor.metaWindow === targetWindow)
-                return actor;
-
-            for (const child of actor.get_children())
-                stack.push(child);
-        }
-        return null;
     }
 }
