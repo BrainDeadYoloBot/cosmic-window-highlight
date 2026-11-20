@@ -16,7 +16,7 @@ export default class CosmicWindowHighlightExtension extends Extension {
         this._borderThickness = this._settings.get_int('border-thickness');
         this._highlightMaximized = this._settings.get_boolean('highlight-maximized');
         this._animationDuration = this._settings.get_int('animation-duration');
-
+        this._borderRadius = this._settings.get_int('border-radius')
         this._border = new St.Widget({
             style_class: ACTIVE_CLASS,
             reactive: false,
@@ -41,6 +41,10 @@ export default class CosmicWindowHighlightExtension extends Extension {
             })],
             [this._settings, this._settings.connect('changed::animation-duration', () => {
                 this._animationDuration = this._settings.get_int('animation-duration');
+            })],
+            [this._settings, this._settings.connect('changed::border-radius', () => {
+                this._borderRadius = this._settings.get_int('border-radius');
+                this._applyThickness();
             })],
             [global.display, global.display.connect('notify::focus-window', () => {
                 this._onFocusChanged();
@@ -83,9 +87,10 @@ export default class CosmicWindowHighlightExtension extends Extension {
 
     _applyThickness() {
         const px = this._borderThickness;
+        const rad = this._borderRadius;
 
         if (this._border) {
-            this._border.set_style(`border-width: ${px}px; border-radius: ${12 + px}px;`);
+            this._border.set_style(`border-width: ${px}px; border-radius: ${rad + px}px;`);
             this._syncGeometry();
         }
 
@@ -257,6 +262,7 @@ export default class CosmicWindowHighlightExtension extends Extension {
         const edgeFlush = this._isEdgeFlush(this._trackedWindow);
 
         const px = this._borderThickness;
+        const rad = this._borderRadius
         const outset = edgeFlush ? 0 : px;
 
         this._border.set_position((frame.x - buf.x) - outset, (frame.y - buf.y) - outset);
@@ -267,7 +273,7 @@ export default class CosmicWindowHighlightExtension extends Extension {
             this._border.set_style(`border-width: ${px}px; border-radius: 0px;`);
         } else {
             this._border.remove_style_class_name(MAXIMIZED_CLASS);
-            this._border.set_style(`border-width: ${px}px; border-radius: ${12 + px}px;`);
+            this._border.set_style(`border-width: ${px}px; border-radius: ${rad + px}px;`);
         }
     }
 

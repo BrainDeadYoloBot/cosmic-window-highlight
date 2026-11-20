@@ -19,5 +19,11 @@
       <summary>Animation duration (ms)</summary>
       <description>Duration of the border fade-in animation in milliseconds. Set to 0 to disable.</description>
     </key>
+    <key name="border-radius" type="i">
+      <default>15</default>
+      <range min="0" max="25"/>
+      <summary>Border corner radius</summary>
+      <description>Sets the roundness of the border corners</description>
+    </key>
   </schema>
 </schemalist>

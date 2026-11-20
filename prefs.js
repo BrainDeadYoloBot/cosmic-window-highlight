@@ -70,6 +70,25 @@ export default class CosmicWindowHighlightPreferences extends ExtensionPreferenc
         );
         group.add(animationRow);
 
+        const radiusRow = new Adw.SpinRow({
+            title: ('Border radius'),
+            subtitle: ('Roundness of the border corners'),
+            adjustment: new Gtk.Adjustment({
+                lower: 0,
+                upper: 25,
+                step_increment: 1,
+                page_increment: 2,
+                value: settings.get_int('border-radius'),
+            }),
+        });
+        settings.bind(
+            'border-radius',
+            radiusRow,
+            'value',
+            Gio.SettingsBindFlags.DEFAULT
+        );
+        group.add(radiusRow);
+
         // Keep settings alive for the lifetime of the preferences window
         window._settings = settings;
     }
