@@ -165,15 +165,13 @@ export default class CosmicWindowHighlightExtension extends Extension {
     }
 
     _shouldShowBorder(win, inOverview) {
+        const hideFullscreen = !inOverview && win.is_fullscreen();
         const hideMaximized = !inOverview && win.is_maximized() && !this._highlightMaximized;
-        return !(win.is_fullscreen() || win.minimized || hideMaximized);
+        return !(win.minimized || hideFullscreen || hideMaximized);
     }
 
-    _isEdgeFlush(win, inOverview) {
-        if (inOverview)
-            return false;
-
-        if (win.is_maximized() || win.maximized_vertically || win.maximized_horizontally)
+    _isEdgeFlush(win) {
+        if (win.is_fullscreen() || win.is_maximized() || win.maximized_vertically || win.maximized_horizontally)
             return true;
 
         const frame = win.get_frame_rect();
