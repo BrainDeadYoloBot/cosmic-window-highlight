@@ -188,18 +188,41 @@ export default class CosmicWindowHighlightExtension extends Extension {
         return (onLeft || onRight) && (onTop || onBottom);
     }
 
+    _getMonitorOverviewWindowCount(trackedWin) {
+        return global.get_window_actors().filter(actor => {
+            const win = actor.meta_window;
+            return win &&
+                win.get_monitor() === trackedWin.get_monitor() &&
+                !win.is_skip_taskbar() &&
+                HIGHLIGHTABLE_TYPES.has(win.get_window_type()) &&
+                win.located_on_workspace(global.workspace_manager.get_active_workspace());
+        }).length;
+    }
+
+    _getOverviewMultiplier(win) {
+        const count = this._getMonitorOverviewWindowCount(win);
+        if (count <= 1)
+            return 1.25;
+        if (count <= 4)
+            return 1.5;
+        return 2;
+    }
+
     _computeBorderGeometry(win, inOverview) {
         const buf = win.get_buffer_rect();
         const frame = win.get_frame_rect();
         const edgeFlush = this._isEdgeFlush(win, inOverview);
-        const px = this._borderThickness;
-        const outset = edgeFlush ? 0 : px;
+        const px = inOverview
+            ? Math.round(this._borderThickness * this._getOverviewMultiplier(win))
+            : this._borderThickness;
+        const outset = edgeFlush ? 0 :px;
 
         return {
             x: (frame.x - buf.x) - outset,
             y: (frame.y - buf.y) - outset,
             width: frame.width + outset * 2,
             height: frame.height + outset * 2,
+            thickness: px,
             radius: edgeFlush ? 0 : this._borderRadius + px,
         };
     }
@@ -218,10 +241,10 @@ export default class CosmicWindowHighlightExtension extends Extension {
             return;
         }
 
-        const { x, y, width, height, radius } = this._computeBorderGeometry(this._trackedWindow, inOverview);
+        const { x, y, width, height, thickness: px, radius } = this._computeBorderGeometry(this._trackedWindow, inOverview);
         this._border.set_position(x, y);
         this._border.set_size(width, height);
-        this._border.set_style(`border-width: ${this._borderThickness}px; border-radius: ${radius}px;`);
+        this._border.set_style(`border-width: ${px}px; border-radius: ${radius}px;`);
 
         if (!this._border.visible) {
             this._border.visible = true;
