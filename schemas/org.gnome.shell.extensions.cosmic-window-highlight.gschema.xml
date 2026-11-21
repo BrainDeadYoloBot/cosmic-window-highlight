@@ -25,5 +25,10 @@
       <summary>Border corner radius</summary>
       <description>Sets the roundness of the border corners</description>
     </key>
+    <key name="dynamic-overview" type="b">
+      <default>true</default>
+      <summary>Dynamic border thickness in overview</summary>
+      <description>Dynamically adjust border thickness in overview as a function of the displayed windows count.</description>
+    </key>
   </schema>
 </schemalist>
